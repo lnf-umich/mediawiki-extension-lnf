@@ -1,2 +1,2 @@
 # mediawiki-extension-lnf
-An extension for MediaWiki that customize the LNF Wiki.
+An extension for MediaWiki that customizes the LNF Wiki.
