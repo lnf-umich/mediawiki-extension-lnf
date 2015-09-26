@@ -19,6 +19,11 @@ class LNF{
         return $this->apiGet("scheduler/resource-info?IsActive=true");
     }
     
+    function isLabExcluded($t){
+        global $wgLnfToolTableExcludedLabs;
+        return in_array($t->LabID, $wgLnfToolTableExcludedLabs);
+    }
+    
     function getResource($id){
         return $this->apiGet("scheduler/resource?id=$id", true);
     }
@@ -94,7 +99,7 @@ class LNF{
         $json = file_get_contents($this->getBaseUrl().$path, false, $context);
         
         return json_decode($json);
-    }
+    } 
     
     //http://stackoverflow.com/questions/834303/startswith-and-endswith-functions-in-php
     function startsWith($haystack, $needle) {

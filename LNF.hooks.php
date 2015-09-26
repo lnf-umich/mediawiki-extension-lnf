@@ -14,7 +14,7 @@ class LNFHooks{
     }
     
     static function renderToolTable($input, array $args, Parser $parser, PPFrame $frame){
-        global $lnf;
+        global $lnf, $wgLnfToolTableExcludeXPath;
         
         $parser->disableCache();
         
