@@ -14,9 +14,10 @@ class LNFHooks{
     }
     
     static function renderToolTable($input, array $args, Parser $parser, PPFrame $frame){
+        global $lnf;
+        
         $parser->disableCache();
         
-        $lnf = new LNF();
         $tools = $lnf->getToolList();
         
         ob_start();
@@ -31,6 +32,8 @@ class LNFHooks{
 	}
     
     static function renderToolProperty($input, array $args, Parser $parser, PPFrame $frame){
+        global $lnf;
+        
         $parser->disableCache();
         
         $id = $args['id'];
@@ -40,7 +43,6 @@ class LNFHooks{
         $parsedId = $parser->recursiveTagParse($id, $frame);
         
         if (is_numeric($parsedId) && !array_key_exists($parsedId, self::$resources)){
-            $lnf = new LNF();
             self::$resources[$parsedId] = $lnf->getResource($parsedId);
         }
         
@@ -75,12 +77,92 @@ class LNFHooks{
     }
     
     static function renderAuthCheck(&$parser, $param1, $param2){
+        global $lnf;
+        
         $parser->disableCache();
-        $lnf = new LNF();
+        
         $authCheck = $lnf->authCheck();
         $isAuthorized = $authCheck->Authenticated;
         return $isAuthorized ? $param1 : $param2;
     }
+    
+    static function onUserLoadAfterLoadFromSession($user){
+		global $lnf, $wgAuth;
+
+		if ($user->isLoggedIn()){
+			return;
+		}
+		else{
+			//$wgAuth->log("no one is logged in, performing authCheck");
+		
+			//do the authCheck
+			$auth = $lnf->authCheck();
+			//echo '<textarea style="height: 500px; width: 100%;">';
+            //var_dump($auth);
+            //echo '</textarea>';
+			if ($auth->Authenticated){
+				//make sure the username is a proper mediawiki name
+				$munged = User::getCanonicalName($auth->UserName);
+				
+				//get the id of a local account, this will create the account if it doesn't exist
+				$id = $wgAuth->getFormsAuthId($munged);
+				
+				if ($id != 0){
+					$user->setId($id);
+					$user->loadFromId();
+					$user->setEmail($auth->Email);
+					$user->mEmailAuthenticated = wfTimestampNow();
+					$user->setRealName($auth->FName . ' ' . $auth->LName);
+					$user->setPassword(null);
+					
+					// add user to any available groups
+					$allGroups = User::getAllGroups();
+					$userGroups = $user->getGroups();
+					foreach ($allGroups as $g){
+						//only add the group if it is already defined (in LocalSettings.php) and the user is not already a member
+						if (in_array($g, $auth->Roles) && !in_array($g, $userGroups)){
+							$user->addGroup($g);
+						}
+					}
+					
+					$user->saveSettings();
+					$wgAuth->updateUser($user);
+					$user->saveToCache();
+					$user->setCookies();
+					wfSetupSession();
+				}
+			}
+		}
+	}
+	
+	static function onUserLoginForm(&$template){
+		global $wgLnfRedirectLoginForm, $wgLnfLoginUrl, $wgLnfApiClientId, $wgOut;
+        
+		$returnTo = isset($_GET["returnto"]) ? $_GET["returnto"] : "";
+		$returnQuery = isset($_GET["returntoquery"]) ? $_GET["returntoquery"] : "";
+        
+        $redirectUri = "http://lnf-linux-dev.eecs.umich.edu/wiki/Special:LNF";
+        $separator = "?";
+        
+        if ($returnTo){
+            $redirectUri .= $separator."returnto=".$returnTo;
+            $separator = "&";
+        }
+        
+        if ($returnQuery){
+            $redirectUri .= $separator."returntoquery=".$returnQuery;
+            $separator = "&";
+        }
+        
+        $loginUrl = $wgLnfLoginUrl."?client_id=".$wgLnfApiClientId."&redirect_uri=".urlencode($redirectUri)."&state=lnf-wiki-login";
+        
+		$template->data["message"] = '<div style="font-size: 18pt; font-weight: bold;"><a href="'.$loginUrl.'">Click here to log in using LNF Online Services</div>';
+		$template->data["messagetype"] = "warning";
+        
+        if ($wgLnfRedirectLoginForm){
+            $wgOut->redirect($loginUrl);
+       }
+	}
     
     //returns the value of an object property, including arrays and nexted objects
     //examples:

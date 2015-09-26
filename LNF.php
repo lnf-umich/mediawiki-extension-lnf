@@ -9,7 +9,9 @@ $wgExtensionCredits['parserhook'][] = array(
 );
 
 $wgAutoloadClasses['LNF'] = __DIR__ . '/LNF.body.php';
+$wgAutoloadClasses['LNFAuth'] = __DIR__ . '/LNF.auth.php';
 $wgAutoloadClasses['LNFHooks'] = __DIR__ . '/LNF.hooks.php';
+$wgAutoloadClasses['LNFSpecial'] = __DIR__ . '/LNF.special.php';
 
 $wgResourceModules['ext.LNF'] = array(
 	"scripts"		=> array("js/lnf.js"),
@@ -18,8 +20,21 @@ $wgResourceModules['ext.LNF'] = array(
 	"remoteExtPath"	=> "LNF"
 );
 
+$wgMessagesDirs['LNF'] = __DIR__ . '/i18n';
 $wgExtensionMessagesFiles['LNFMagic'] = __DIR__ . '/LNF.i18n.magic.php';
+$wgExtensionMessagesFiles['LNFAlias'] = __DIR__ . '/LNF.alias.php';
+$wgSpecialPages['LNF'] = 'LNFSpecial';
+
+$lnf = new LNF();
+
+if (!isset($wgLnfEnableOAuth))
+    $wgLnfEnableOAuth = false;
+
+if ($wgLnfEnableOAuth){
+    $wgAuth = new LNFAuth();
+    $wgHooks['UserLoadAfterLoadFromSession'][] = 'LNFHooks::onUserLoadAfterLoadFromSession';
+    $wgHooks['UserLoginForm'][] = 'LNFHooks::onUserLoginForm';
+}
 
 $wgHooks['BeforePageDisplay'][] = 'LNFHooks::onBeforePageDisplay';
-
 $wgHooks['ParserFirstCallInit'][] = 'LNFHooks::onParserFirstCallInit';
