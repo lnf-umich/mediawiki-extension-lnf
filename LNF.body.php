@@ -19,9 +19,14 @@ class LNF{
         return $this->apiGet("scheduler/resource-info?IsActive=true");
     }
     
-    function isLabExcluded($t){
-        global $wgLnfToolTableExcludedLabs;
-        return in_array($t->LabID, $wgLnfToolTableExcludedLabs);
+    function isToolIncluded($tool, $args){
+        //$args is the arguments passed to the lnf-tool-table tag
+        if (is_array($args) && array_key_exists('labs', $args)){
+            return in_array($tool->LabID, explode(',', $args['labs']));
+        }
+        
+        //arg not passed
+        return true;
     }
     
     function getResource($id){
